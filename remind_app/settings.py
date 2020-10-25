@@ -20,8 +20,11 @@ PROJECT_NAME = os.path.basename(BASE_DIR)
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'k)y5dyjvg5vsgvk8aox!-qgms$oo4$56x9w^w6_u(d7tb%bu4*'
+#SECRET_KEYを外部ファイルから読み込む
+try:
+    from .local_settings import *
+except ImportError:
+    pass
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
