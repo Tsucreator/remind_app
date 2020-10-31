@@ -11,8 +11,9 @@ settingファイルは本番(setting.py)と開発(local_setting.py)で分ける�
 0.0.0.0:8000はアプリケーションサーバが受けるIP。アプリケーションサーバの8000番ポートがどこからのアクセスも受けるということ。
 WebサーバのIPはまた別のはなし。
 
-## setting.pyのSECRET_KEYを外部ファイルから読み込む
-安全面からSECRET KEYを外部から読み込むように設定しておく。
+## setting.pyのSECRET_KEYを外部ファイルから読み込む（開発中のみ）
+gitで管理するのであればSECRET KEYを外部から読み込むように設定しておく。
+これは本番環境では、新たにランダムの文字列を生成し設定するのがいい。
 
 （変更前）
 ```python:setting.py
@@ -40,6 +41,25 @@ SECRET_KEY = 'SECRET KEYの文字列'
 さらに、.gitignoreにlocal_setting.pyを記載。
 ```python:.gitignore
 local_setting.py
+```
+
+### 新しい文字列の作成
+
+get_random_secret_key.pyなど適当な名前でファイルを作り
+
+```python:get_random_secret_key.py
+#新たにSECRET KEYを作成するためのファイル
+
+from django.core.management.utils import get_random_secret_key
+
+secret_key = get_random_secret_key()
+text = 'SECRET_KEY = \'{0}\''.format(secret_key)
+print(text)
+```
+
+このコマンドを実行する。
+```
+$ python3 get_random_secret_key.py
 ```
 
 ## 静的ファイルの設定
@@ -110,7 +130,7 @@ urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 デフォルトではおそらくSQLiteが指定されている。
 今回はMySQLで設定をする。他にもOracleとPostgreが対応している。
-```python:config/urls.py
+```python:setting.py
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
@@ -130,6 +150,7 @@ DATABASES = {
 }
 ```
 本番環境と開発環境で異なる時はこれもそれぞれで書いておくといい。
+
 ATOMIC_REQUESTSはトランザクションの有効範囲を決める。(デフォルトではFalse)
 銀行の送金などでは、片方が送金（表示金額を減らす）、片方が受け取り（表示金額を増やす）処理を行うが
 送金が失敗したら受け取りも失敗としないと錬金できてしまう。（あるいはお金が消える。）
@@ -140,5 +161,111 @@ sql_modeは厳密モードである「STRICT_TRANS_TABLES」や「STRICT_ALL_TAB
 >Django highly recommends activating a strict mode for MySQL to prevent data loss (either STRICT_TRANS_TABLES or STRICT_ALL_TABLES).
 >引用元：DjangoDocument
 
+## LOGの設定
+ログ出力に関する設定はプロジェクト作成時には設定ファイルには記載がない。
+setting.pyに本番用と開発用のログ設定を記載する。この様に本番、開発で大きく異なるときはやはりlocal_...で分けた方がよさそう。
 
+```python:settings.py
+#ロギングの設定全般、本番稼働時にファイルにログを保存する用の設定
+#log設定
+#開発
+if DEBUG:
+    LOGGING = {
+        # バージョンは「1」固定
+        'version': 1,
+        # 既存のログ設定を無効にしない様に設定
+        'disable_existing_loggers': False,
+        # ログフォーマット
+        'formatters': {
+            #開発用
+            'develop': {
+                'format': '%(asctime)s [%(levelname)s] %(pathtime)s:%(lineno)d'
+                          '%(message)s'
+            },
+        },
 
+        # ハンドラ
+        'handlers': {
+            # ファイル出力用のハンドラ
+            'file': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',  # 開発用のハンドラ
+                'formatter': 'develop',
+            },
+        },
+
+        # ロガー
+        'loggers': {
+            # アプリケーション全般のログを拾うロガー
+            '': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+
+            # Django本体のログを拾うロガー
+            'django': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            
+            # 発行されるSQL文を出力するための設定
+            'django.db.backends': {
+                'handlers': ['console'],
+                'level': 'DEBUG',
+                'propagate': False,
+            },
+        }, 
+    }
+#本番
+else:
+    LOGGING = {
+        #バージョンは「1」固定
+        'version': 1,
+        #既存のログ設定を無効にしない様に設定
+        'disable_existing_loggers': False,
+        #ログフォーマット
+        'formatters': {
+            #本番用
+            'production': {
+                'format': '%(asctime)s [%(levelname)s] %(process)d %(thread)d'
+                          '%(pathtime)s:%(lineno)d %(message)s'
+            },
+        },
+    
+        #ハンドラ
+        'handlers': {
+            #ファイル出力用のハンドラ
+            'file': {
+                'level': 'INFO',
+                'class': 'logging.handlers.TimeRotatingFileHandler', #ログファイルのローテーションが可能
+                'filename': 'var/log/{}/app.log'.format(PROJECT_NAME),
+                'formatter': 'production',
+            },
+        },
+    
+        #ロガー
+        'loggers': {
+            #アプリケーション全般のログを拾うロガー
+            '': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+        
+            #Django本体のログを拾うロガー
+            'django': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+        },(DEBUG == False):
+    }
+```
+
+ロガーでの設定は「''」で自作のアプリ全般のログ、「'django'」でDjango全体、「'django.db.backends'」でSQLのログになる。
+DEBUGがFalseの時はSQLは出力されない。(パフォーマンスの問題)
+詳しくは[こちら](https://docs.djangoproject.com/ja/2.2/topics/logging/#id3 )などを参考に
+
+## Templatesに関する設定
