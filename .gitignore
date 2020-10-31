@@ -1,1 +1,7 @@
-local_settings.py
+# Default ignored files
+/shelf/
+/workspace.xml
+
+
+local.env
+.env
