@@ -11,9 +11,15 @@ settingファイルは本番(setting.py)と開発(local_setting.py)で分ける�
 0.0.0.0:8000はアプリケーションサーバが受けるIP。アプリケーションサーバの8000番ポートがどこからのアクセスも受けるということ。
 WebサーバのIPはまた別のはなし。
 
-## setting.pyのSECRET_KEYを外部ファイルから読み込む（開発中のみ）
+## setting.pyのSECRET_KEYを外部ファイルから読み込む
 gitで管理するのであればSECRET KEYを外部から読み込むように設定しておく。
-これは本番環境では、新たにランダムの文字列を生成し設定するのがいい。
+これは開発環境で使ったものを使いまわさず、本番環境では新たにランダムの文字列を生成し設定するのがいい。
+
+外部から読み込む際には`django-environ`というパッケージを利用すると便利。
+```
+$ pip3 install django-environ
+```
+でインストール可能
 
 （変更前）
 ```python:setting.py
@@ -24,23 +30,27 @@ SECRET_KEY = 'SECRET KEYの文字列'
 ```
 （変更後）
 ```python:setting.py
+import os
+import environ
 
 〜中略〜
+# SECURITY WARNING: keep the secret key used in production secret!
 
-try:
-    from .local_settings import *
-except ImportError:
-    pass
+# SECRET_KEYを外部ファイルから読み込む
+env = environ.Env()
+# もし、.envファイルが存在したら設定を読み込む（ただし、同じ変数の値は上書きされない。）
+env.read_env(os.path.join(BASE_DIR, '.env'))
+SECRET_KEY = env('SECRET_KEY')
 ```
 
-local_settings.pyを作成し
-```python:local_settings.py
+.envを作成し
+```python:.env
 SECRET_KEY = 'SECRET KEYの文字列'
 ```
 
-さらに、.gitignoreにlocal_setting.pyを記載。
+さらに、.gitignoreに.envを記載。
 ```python:.gitignore
-local_setting.py
+.env
 ```
 
 ### 新しい文字列の作成
@@ -102,7 +112,7 @@ PROJECT_NAME = os.path.basename(BASE_DIR)
 
 ユーザーがアップロードしたファイル、画像などをメディアファイルということにして、一応それらのファイルの管理も記載しておく。
 本来アプリケーションサーバで処理されるアップロードファイルだが、リバースプロキシで処理することでアプリケーション側の負荷が少なくなる。
-DEBUGがFalseのとき（本番環境）の設定
+DEBUGがFalseのとき（本番環境）の設定。
 ```python:local_settings.py
 
 〜中略〜
@@ -266,6 +276,29 @@ else:
 
 ロガーでの設定は「''」で自作のアプリ全般のログ、「'django'」でDjango全体、「'django.db.backends'」でSQLのログになる。
 DEBUGがFalseの時はSQLは出力されない。(パフォーマンスの問題)
-詳しくは[こちら](https://docs.djangoproject.com/ja/2.2/topics/logging/#id3 )などを参考に
+詳しくは[こちら](https://docs.djangoproject.com/ja/2.2/topics/logging/#id3 )などを参考に。
 
 ## Templatesに関する設定
+
+「BACKEND」にはテンプレートエンジン（phpでいうsmartyやbaldeなど）を指定。デフォルトでは「Django Template Language」が設定されている。
+「DIR」、「APP_DIR」はtemplatesのフォルダ検索をどこが優先するかの決め打ち。「APP_DIR」が「True」ならばアプリケーションディレクトリ配下のtemplatesが優先される。
+
+## LANGUAGE_CODEの設定
+
+「ja」にしておく。
+
+## TIME_ZOMEの設定
+
+「Asia/Tokyo」にしておく。
+```
+USE_TZ = True
+```
+これも確認しておく。
+
+## MIDDLEWAREの設定
+
+## ALLOWED_HOSTSの設定
+
+これはセキュリティ対策のための設定でDjangoサイトを配信する際に、誰がホストになるかを指定するもの。
+「DEBUG」が「True」となってい時はどうでもいいが、「False」の際は設定する。FQDN（ホスト名とドメイン名をつなげたもの、`www.example.com`）やIPアドレスなどをいれる。
+ちなみに「'\*'」で「全てを許可」なので開発中とかはこのままでいい。
