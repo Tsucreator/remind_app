@@ -11,9 +11,10 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-filepath = '/Users/書類/programing/Django/Django-project/remind_app'
+filepath = '/Users/document/programing/Django/Django-project/remind_app/remind_app'
 BASE_DIR = os.path.dirname(filepath)
 PROJECT_NAME = os.path.basename(BASE_DIR)
 
@@ -21,15 +22,15 @@ PROJECT_NAME = os.path.basename(BASE_DIR)
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 #SECRET_KEYを外部ファイルから読み込む
-try:
-    from .local_settings import *
-except ImportError:
-    pass
+env = environ.Env()
+#もし、.envファイルが存在したら設定を読み込む（ただし、同じ変数の値は上書きされない。）
+env.read_env(os.path.join(BASE_DIR, '.env'))
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -53,14 +54,18 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+#HTTP→HTTPSへのリダイレクト機能
+SECURE_SSL_REDIRECT = False
+
 ROOT_URLCONF = 'remind_app.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],  #ベースディレクトリ配下のtemplatesフォルダを優先して検索（APP_DIRSの方が優先）
+        'APP_DIRS': True,                               #アプリケーションディレクトリ配下のtemplatesフォルダを優先して検索
         'OPTIONS': {
+            #テンプレート側から変数を渡す設定。
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -76,14 +81,111 @@ WSGI_APPLICATION = 'remind_app.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
+env.db()['ATOMIC_REQUESTS'] = True
+sac={}
+sac['sql_mode'] = 'TRADITIONAL', 'NO_AUTO_VALUES_ON_ZERO'
+env.db()['OPTIONS']=sac
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+    'default': env.db(),
 }
 
+#ロギングの設定全般、本番稼働時にファイルにログを保存する用の設定
+#log設定
+#開発
+if DEBUG:
+    LOGGING = {
+        # バージョンは「1」固定
+        'version': 1,
+        # 既存のログ設定を無効にしない様に設定
+        'disable_existing_loggers': False,
+        # ログフォーマット
+        'formatters': {
+            #開発用
+            'develop': {
+                'format': '%(asctime)s [%(levelname)s] %(pathname)s:%(lineno)d'
+                          '%(message)s'
+            },
+        },
+
+        # ハンドラ
+        'handlers': {
+            # ファイル出力用のハンドラ
+            'console': {
+                'level': 'DEBUG', #全てのログレベルを拾う
+                'class': 'logging.StreamHandler',  # 開発用のハンドラ
+                'formatter': 'develop',
+            },
+        },
+
+        # ロガー
+        'loggers': {
+            # アプリケーション全般のログを拾うロガー
+            '': {
+                'handlers': ['console'],
+                'level': 'INFO', #DEBUGレベルを無視
+                'propagate': False,
+            },
+
+            # Django本体のログを拾うロガー
+            'django': {
+                'handlers': ['console'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+
+            # 発行されるSQL文を出力するための設定
+            'django.db.backends': {
+                'handlers': ['console'],
+                'level': 'DEBUG',
+                'propagate': False,
+            },
+        },
+    }
+#本番
+else:
+    LOGGING = {
+        #バージョンは「1」固定
+        'version': 1,
+        #既存のログ設定を無効にしない様に設定
+        'disable_existing_loggers': False,
+        #ログフォーマット
+        'formatters': {
+            #本番用
+            'production': {
+                'format': '%(asctime)s [%(levelname)s] %(process)d %(thread)d'
+                          '%(pathname)s:%(lineno)d %(message)s'
+            },
+        },
+
+        #ハンドラ
+        'handlers': {
+            #ファイル出力用のハンドラ
+            'file': {
+                'level': 'INFO',
+                'class': 'logging.handlers.TimeRotatingFileHandler', #ログファイルのローテーションが可能
+                'filename': 'var/log/{}/app.log'.format(PROJECT_NAME),
+                'formatter': 'production',
+            },
+        },
+
+        #ロガー
+        'loggers': {
+            #アプリケーション全般のログを拾うロガー
+            '': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+
+            #Django本体のログを拾うロガー
+            'django': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+        },
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -107,9 +209,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ja'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Tokyo'
 
 USE_I18N = True
 
@@ -122,5 +224,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+# 開発環境で使うためのDIR（DEBUG = True）
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+# 本番環境で使うためのDIR（DEBUG = False）
 STATIC_ROOT = ' /var/www/{}/static'.format(PROJECT_NAME)
+
+# メディアファイルの保存先
+MEDIA_URL = '/media/'
+MEDIA_ROOT = ' /var/www/{}/media'.format(PROJECT_NAME)
