@@ -14,7 +14,7 @@ import os
 import environ
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-filepath = '/Users/書類/programing/Django/Django-project/remind_app'
+filepath = '/Users/document/programing/Django/Django-project/remind_app/remind_app'
 BASE_DIR = os.path.dirname(filepath)
 PROJECT_NAME = os.path.basename(BASE_DIR)
 
@@ -53,6 +53,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+#HTTP→HTTPSへのリダイレクト機能
+SECURE_SSL_REDIRECT = False
 
 ROOT_URLCONF = 'remind_app.urls'
 
@@ -100,7 +103,7 @@ if DEBUG:
         'formatters': {
             #開発用
             'develop': {
-                'format': '%(asctime)s [%(levelname)s] %(pathtime)s:%(lineno)d'
+                'format': '%(asctime)s [%(levelname)s] %(pathname)s:%(lineno)d'
                           '%(message)s'
             },
         },
@@ -108,8 +111,8 @@ if DEBUG:
         # ハンドラ
         'handlers': {
             # ファイル出力用のハンドラ
-            'file': {
-                'level': 'DEBUG',
+            'console': {
+                'level': 'DEBUG', #全てのログレベルを拾う
                 'class': 'logging.StreamHandler',  # 開発用のハンドラ
                 'formatter': 'develop',
             },
@@ -119,14 +122,14 @@ if DEBUG:
         'loggers': {
             # アプリケーション全般のログを拾うロガー
             '': {
-                'handlers': ['file'],
-                'level': 'INFO',
+                'handlers': ['console'],
+                'level': 'INFO', #DEBUGレベルを無視
                 'propagate': False,
             },
 
             # Django本体のログを拾うロガー
             'django': {
-                'handlers': ['file'],
+                'handlers': ['console'],
                 'level': 'INFO',
                 'propagate': False,
             },
@@ -151,7 +154,7 @@ else:
             #本番用
             'production': {
                 'format': '%(asctime)s [%(levelname)s] %(process)d %(thread)d'
-                          '%(pathtime)s:%(lineno)d %(message)s'
+                          '%(pathname)s:%(lineno)d %(message)s'
             },
         },
 
@@ -181,7 +184,7 @@ else:
                 'level': 'INFO',
                 'propagate': False,
             },
-        },(DEBUG == False):
+        },
     }
 
 # Password validation
@@ -225,3 +228,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 # 本番環境で使うためのDIR（DEBUG = False）
 STATIC_ROOT = ' /var/www/{}/static'.format(PROJECT_NAME)
+
+# メディアファイルの保存先
+MEDIA_URL = '/media/'
+MEDIA_ROOT = ' /var/www/{}/media'.format(PROJECT_NAME)
