@@ -45,7 +45,8 @@ SECRET_KEY = env('SECRET_KEY')
 
 .envを作成し
 ```python:.env
-SECRET_KEY = 'SECRET KEYの文字列'
+#ここの「＝」については両端にスペースを入れると読み込まないという事例あり。
+SECRET_KEY='SECRET KEYの文字列'
 ```
 
 さらに、.gitignoreに.envを記載。
@@ -197,7 +198,7 @@ if DEBUG:
         # ハンドラ
         'handlers': {
             # ファイル出力用のハンドラ
-            'file': {
+            'console': {
                 'level': 'DEBUG',
                 'class': 'logging.StreamHandler',  # 開発用のハンドラ
                 'formatter': 'develop',
@@ -208,14 +209,14 @@ if DEBUG:
         'loggers': {
             # アプリケーション全般のログを拾うロガー
             '': {
-                'handlers': ['file'],
+                'handlers': ['console'],
                 'level': 'INFO',
                 'propagate': False,
             },
 
             # Django本体のログを拾うロガー
             'django': {
-                'handlers': ['file'],
+                'handlers': ['console'],
                 'level': 'INFO',
                 'propagate': False,
             },
@@ -276,7 +277,8 @@ else:
 
 ロガーでの設定は「''」で自作のアプリ全般のログ、「'django'」でDjango全体、「'django.db.backends'」でSQLのログになる。
 DEBUGがFalseの時はSQLは出力されない。(パフォーマンスの問題)
-詳しくは[こちら](https://docs.djangoproject.com/ja/2.2/topics/logging/#id3 )などを参考に。
+
+詳しくは[こちら](https://docs.djangoproject.com/ja/2.2/topics/logging/#topic-logging-parts-loggers )などを参考に。
 
 ## Templatesに関する設定
 
@@ -296,6 +298,11 @@ USE_TZ = True
 これも確認しておく。
 
 ## MIDDLEWAREの設定
+
+```python:setting.py
+#HTTP→HTTPSへのリダイレクト機能
+SECURE_SSL_REDIRECT = True
+```
 
 ## ALLOWED_HOSTSの設定
 
