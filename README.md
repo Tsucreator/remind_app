@@ -190,7 +190,7 @@ if DEBUG:
         'formatters': {
             #開発用
             'develop': {
-                'format': '%(asctime)s [%(levelname)s] %(pathtime)s:%(lineno)d'
+                'format': '%(asctime)s [%(levelname)s] %(pathname)s:%(lineno)d'
                           '%(message)s'
             },
         },
@@ -241,7 +241,7 @@ else:
             #本番用
             'production': {
                 'format': '%(asctime)s [%(levelname)s] %(process)d %(thread)d'
-                          '%(pathtime)s:%(lineno)d %(message)s'
+                          '%(pathname)s:%(lineno)d %(message)s'
             },
         },
     
